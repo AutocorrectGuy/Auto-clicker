@@ -73,8 +73,9 @@ All hotkeys live in **./SnapshotPlayer/Config/GlobalHotkeyConfig.cs**.
 | /SnapshotPlayer.app.exe      | Optional compiled executable     |
 | /SnapshotPlayerFullCode.cs   | Single‑file flattened code       |
 
-(The last three files appear automatically after the first run, if you are setting `$buildExe` as true in `index.ps1`, if not - the exe file is not generated and in-memory assembly is ran.)
+>The last three files appear automatically after the first run, if you are setting `$buildExe` as true in `index.ps1`, if not - the exe file is not generated and in-memory assembly is ran.)
 There are actually 2 in-memory assemblys running then - one for loading the namespace and dll for xaml/xamlReader - second one - that wraps the whole thing together and has entrypoint `[Program]::Main()`
+
 ---
 
 ## 💡 Features
