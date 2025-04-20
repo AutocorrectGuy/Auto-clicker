@@ -66,16 +66,20 @@ public class MouseInputTracker
     });
   }
 
-  // Can be invoked both b
-  public void StopTracking()
+  // returns true if succeed saving a file
+  public bool StopTracking()
   {
-    if (!IsTracking) return;
+    if (!IsTracking) return false;
 
-    IsTracking = false;
+    if(IsTracking) {
+      IsTracking = false;
+      WriteOutputFile();
+      _snapshots.Clear();
+      IsTrackingAction.Invoke(false); // trigger ui after file list refreshed
+      return true;
+    }
 
-    WriteOutputFile();
-    _snapshots.Clear();
-    IsTrackingAction.Invoke(false); // trigger ui after file list refreshed
+    return false;
   }
 
   private MouseInputSnapshot CreateSnapshot(int relativeTimestamp)

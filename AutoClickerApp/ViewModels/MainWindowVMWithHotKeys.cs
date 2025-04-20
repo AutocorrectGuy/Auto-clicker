@@ -43,16 +43,15 @@ public class MainWindowVMWithHotKeys : MainWindowVM
         // stop tracking if tracking
         if (WindowsMessageBinder.MouseInputTracker.IsTracking)
         {
-            if (WindowsMessageBinder != null)
-                WindowsMessageBinder.MouseInputTracker.StopTracking();
+            bool success = WindowsMessageBinder.MouseInputTracker.StopTracking();
+            if(success) SelectedSnapshotIndex = 0; // select the last recoreded snapshot
             OnPropertyChanged("IsTrackingStatusText");
         }
 
         // stop playing if playing
         if (WindowsMessageBinder.MouseInputTracker.IsPlaying)
         {
-            if (WindowsMessageBinder != null)
-                WindowsMessageBinder.MouseInputTracker.IsPlayingAction.Invoke(false);
+            WindowsMessageBinder.MouseInputTracker.IsPlayingAction.Invoke(false);
             OnPropertyChanged("IsPlayingStatusText");
         }
     }
@@ -64,8 +63,7 @@ public class MainWindowVMWithHotKeys : MainWindowVM
     private void _handleSpaceKey()
     {
         // start tracking
-        if (WindowsMessageBinder != null)
-            WindowsMessageBinder.MouseInputTracker.StartTracking();
+        WindowsMessageBinder.MouseInputTracker.StartTracking();
         OnPropertyChanged("IsTrackingStatusText");
     }
 
