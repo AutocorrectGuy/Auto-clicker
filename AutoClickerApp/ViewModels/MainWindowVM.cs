@@ -14,8 +14,6 @@ public class MainWindowVM : ViewModelBase
     // 
     public WindowsMessageBinder WindowsMessageBinder;
 
-    private readonly string _snapshotsPath = "C:/Users/marti/Desktop/snapshots";
-
     private SnapshotFileList _snapshotFileList;
     public SnapshotFileList SnapshotFileList
     {
@@ -72,8 +70,11 @@ public class MainWindowVM : ViewModelBase
 
     public MainWindowVM()
     {
-        SnapshotFileList = new SnapshotFileList(_snapshotsPath);
+        IsTracking = false;
+        IsPlaying = false;
+
         WindowsMessageBinder = new WindowsMessageBinder();
+        SnapshotFileList = new SnapshotFileList(WindowsMessageBinder.MouseInputTracker.SnapshotsPath);
 
         WindowsMessageBinder.MouseInputTracker.IsPlayingAction += (status) =>
         {
@@ -85,11 +86,8 @@ public class MainWindowVM : ViewModelBase
             IsTracking = status;
             OnPropertyChanged("IsTracking");
             // after tracking reload the file list
-            SnapshotFileList = new SnapshotFileList(_snapshotsPath);
+            SnapshotFileList = new SnapshotFileList(WindowsMessageBinder.MouseInputTracker.SnapshotsPath);
         };
-        
-        IsTracking = false;
-        IsPlaying = false;
     }
 
     protected void _runShapshot()

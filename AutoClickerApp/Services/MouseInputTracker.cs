@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-
 public class MouseInputSnapshot
 {
   public int X { get; set; }
@@ -19,6 +18,8 @@ public class MouseInputSnapshot
 
 public class MouseInputTracker
 {
+  public string SnapshotsPath = Path.GetFullPath("./Snapshots");
+
   private readonly List<MouseInputSnapshot> _snapshots = new List<MouseInputSnapshot>();
   private int _intervalMs = 25;
 
@@ -34,6 +35,7 @@ public class MouseInputTracker
 
   public MouseInputTracker()
   {
+    _initSnapshotsPath();
     IsPlayingAction = (bool status) => { IsPlaying = status; };
     IsTrackingAction = (bool status) => { IsTracking = status; };
   }
@@ -100,7 +102,8 @@ public class MouseInputTracker
       FileName = defaultFileName,
       Filter = "CSV Files (*.csv)|*.csv",
       DefaultExt = ".csv",
-      Title = "Save Snapshot As"
+      Title = "Save Snapshot As",
+      InitialDirectory = SnapshotsPath
     };
 
     bool? result = saveDialog.ShowDialog();
@@ -203,5 +206,13 @@ public class MouseInputTracker
     // release if still down at end
     if (prevLeftDown) User32.SendMouseUp(true);
     if (prevRightDown) User32.SendMouseUp(true);
+  }
+
+  private void _initSnapshotsPath()
+  {
+    if (Directory.Exists(SnapshotsPath))
+      return;
+
+    Directory.CreateDirectory(SnapshotsPath);
   }
 }
