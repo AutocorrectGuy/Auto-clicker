@@ -19,7 +19,7 @@ Set-StrictMode -Version Latest
 
 [string] $APP_NAME = "AutoClickerApp"
 [string] $ASSEMBLY_PATH = "./$($APP_NAME).dll"
-[string] $EXECUTABLE_PATH = "./$($APP_NAME).exe"
+[string] $EXECUTABLE_PATH = "./$($APP_NAME).app.exe"
 [string] $SOURCE_CODE_PATH = "./$($APP_NAME)"
 [string] $BUNDLED_CODE_PATH = "./$($APP_NAME)FullCode.cs"
 

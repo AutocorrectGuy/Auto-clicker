@@ -1,64 +1,90 @@
-# 🖱️ AutoClickerApp
+# 🖥️ SnapshotPlayer
 
-Simple auto clicker built with **C# + WPF**.  
-Runs in-memory or compiles into a standalone `.exe`.  
-No installers. No 3rd party dependencies. Lightweight and minimal.
-
-![screenshot](./Assets/screenshot.png)
+Lightweight snapshot **recorder + player** built with **C# + WPF**.  
+Records keyboard / mouse "snapshots", then re‑plays them on demand at any chosen speed.  
+Runs entirely in‑memory *or* compiles to a standalone `.exe`—no installers, no external dependencies.
 
 ---
 
-## 🚀 Run in Development Mode (in-memory)
-
-```ps1
-start dev
-```
-
-```ps1
-powershell -ep Bypass -File ./index.ps1
-```
-
----
-
-## 📦 Run in Build Mode (generate .exe)
-
-```
-powershell -ep Bypass -c { & "./index.ps1" -buildExe $true }
-```
-
-.. and then you can simply run the exe file.
+Why I even built this:
+1. The whole thing could be compiled with csc.exe, right away, no downloades required - but antivirus checks it and
+(not in this app), but in other apps, antivirus gets triggered because of P/Invoke stuff. 
+2. Educational purposes. This has been lots of pain in the a** and it has been a journey in learning an applying different concepts
+of not only coding, but programming itself. This whole thing is more or leess practice of:
+- MVV pattern practice (Models, views, viewmodels);
+- trying to separate logic from ui as much as possible;
+- understanding what I can and can NOT do on Windows with P/Invoke
+- core c# library/assembly usage, such as System.IO stuff
+- oop
+- and more.
 
 ---
 
-## Configuration
+![screenshot](Assets/screenshot_v2.png)
 
-You can configure hotkeys (start and stop) in "./AutoClickerApp/Config/GlobalHotkeyConfig.cs" by changing `Key.Space` and/or `Key.Escape` to other ther `System.Windows.Input.Key`: https://learn.microsoft.com/en-us/dotnet/api/system.windows.input.key *(from official Microsoft.com documentation)*.
+> This was not meant to be design practice, so I fully asked chatgpt for the wpf xaml design and then just modified it by hand. Recently read a book about wpf design practices and it helped a lot there
+---
 
-## 🧠 How It Works
+## 🚀 Run in Development Mode (in‑memory)
 
-- All `.cs` files are combined into one single file
-- Code is compiled using PowerShell’s `Add-Type`
-- You choose whether to run it in-memory or generate an `.exe`
-- No external libraries or tools required — just .NET Framework + PowerShell
+    start dev
+
+    powershell -ep Bypass -File ./index.ps1
+
+---
+
+## 📦 Run in Build Mode (generate .exe)
+
+    powershell -ep Bypass -c { & "./index.ps1" -buildExe $true }
+
+…then simply double‑click the generated **SnapshotPlayer.exe**.
+
+---
+
+## ⚙️ Configuration
+
+All hotkeys live in **./SnapshotPlayer/Config/GlobalHotkeyConfig.cs**.
+
+| Action                         | Default Key(s) | Change to any System.Windows.Input.Key |
+|--------------------------------|----------------|----------------------------------------|
+| Start / stop **recording**     | **Space**      | Replace Key.Space with any key |
+| Start **playback**             | **Ctrl + R**   | Replace Key.R (and the modifier) |
+| Stop **recording / playback**  | **Escape**     | Replace Key.Escape with any key |
+
+---
+
+## 🧠 How It Works
+
+1. Every .cs file is flattened into one file.  
+2. PowerShell's Add‑Type compiles that file:  
+   * Run directly for an in‑memory assembly  
+   * Add the **‑buildExe** flag for a portable SnapshotPlayer.exe  
+3. No NuGet packages, no MSBuild—just .NET Framework + PowerShell.
 
 ---
 
 ## 📁 Project Structure
 
-- `/AutoClickerApp/` – source code files
-- `/index.ps1` – compiler + launcher
-- `/AutoClickerApp.dll` – generated in-memory assembly
-- `/AutoClickerApp.exe` – optional compiled executable
-- `/AutoClickerAppFullCode.cs` – generated flattened code (for debugging)
+| Path                         | Purpose                          |
+|------------------------------|----------------------------------|
+| /SnapshotPlayer/             | Source code + XAML               |
+| /index.ps1                   | Compiler / launcher script       |
+| /SnapshotPlayer.dll          | Generated in‑memory assembly (1) |
+| /SnapshotPlayer.app.exe      | Optional compiled executable     |
+| /SnapshotPlayerFullCode.cs   | Single‑file flattened code       |
 
+(The last three files appear automatically after the first run, if you are setting `$buildExe` as true in `index.ps1`, if not - the exe file is not generated and in-memory assembly is ran.)
+There are actually 2 in-memory assemblys running then - one for loading the namespace and dll for xaml/xamlReader - second one - that wraps the whole thing together and has entrypoint `[Program]::Main()`
 ---
 
 ## 💡 Features
 
-- Zero-install, portable build system *(both for running in-memory script or by generating .exe file)*
-- Global hotkey support *(Space to start, Escape to stop)*
-- Adjustable click speed *(CPS input)*
+* **Zero‑install, portable build** – run from PowerShell as in-memory assembly or use the generate and run executable
+* **Global hotkeys** – Space (record), Ctrl + R (play), Escape (stop)  
+* **Live status panel** – shows **Tracking**, **Playing**, **Loop** state  
+* **Loop mode** – toggle to repeat snapshots automatically  
+* **Variable playback speed** – 0.1× to 20×  
 
-> AutoClickerApp.dll and AutoClickerAppFullCode.cs will be generated after your run the `./index.ps1`. I left these files in the repository for you to view them if you are intereseted. 
+> Tip: adjust the speed slider while a snapshot is running to slow down or fast‑forward playback in real time.
 
-> Another note: just running ./AutoClickerAppFullCode.cs won’t work on its own, because the XAML needs to resolve the correct namespace and reference the compiled DLL. At least in my case, running everything in a single step didn't work—so the solution is to first compile the app without executing it, and then run it by wrapping the entry point inside Program.Main() to ensure everything loads correctly. 
+Enjoy hacking automation with **SnapshotPlayer**!

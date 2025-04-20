@@ -2,124 +2,501 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:AutoClickerApp;assembly=AutoClickerApp"
+    Title="―― Cursror macro player ―― by AutocorrectGuy"
     WindowStartupLocation="CenterScreen"
-    Title="―― AutoClicker ―― by AutocorrectGuy"
-    Height="500"
-    Width="440"
-    Background="#252526"
+    Height="480"
+    Width="760"
+    Background="#1a1a1a"
     Foreground="#eeeeee"
     FontFamily="Segoe UI"
     FontSize="14">
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20" Width="380">
+    <Window.Resources>
+        <LinearGradientBrush x:Key="MetalDarkGradient"
+                             StartPoint="0,0"
+                             EndPoint="1,1">
+            <GradientStop Color="#1c1c1c"
+                          Offset="0"/>
+            <GradientStop Color="#191919"
+                          Offset="0.5"/>
+            <GradientStop Color="#1a1a1a"
+                          Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Resources>
 
-        <!-- App Title -->
-        <TextBlock TextAlignment="Center" Margin="0 0 0 8" FontSize="24" FontWeight="Bold">
-            <Run Text="―――― " Foreground="#007fd4"/>
-            <Run Text="Auto" Foreground="#eeeeee"/>
-            <Run Text="Clicker" Foreground="#007fd4"/>
-            <Run Text=" ――――" Foreground="#007fd4"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            Grid.Row="0"
+            TextAlignment="Center"
+            FontSize="22"
+            FontWeight="Bold"
+            Margin="0,12">
+                <Run Text="---- " Foreground="#eeeeee"/>
+                <Run Text="Record 'n" Foreground="#eeeeee"/>
+                <Run Text="Play" Foreground="#007fd4"/>
+                <Run Text=" ----" Foreground="#eeeeee"/>
         </TextBlock>
 
-        <!-- Subtitle -->
-        <TextBlock Text="Spacebar to start and Escape to stop"
-                   FontStyle="Italic"
-                   Foreground="#888"
-                   FontSize="13"
-                   Margin="0 0 0 20"
-                   TextAlignment="Center" />
-
-        <!-- Stats Grid -->
-        <Grid>
+        <Grid Grid.Row="1"
+              Margin="12">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Grid.RowDefinitions>
-                <RowDefinition />
-                <RowDefinition />
-                <RowDefinition />
-            </Grid.RowDefinitions>
-
-            <!-- Status -->
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Status:" VerticalAlignment="Center" Margin="8,4"/>
-            <TextBlock Grid.Row="0" Grid.Column="1"
-                       Text="{Binding AutoClicker.IsClickingStatusText}"
-                       HorizontalAlignment="Right"
-                       VerticalAlignment="Center"
-                       Margin="8,4">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Foreground" Value="#7AB0DF"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding AutoClicker.IsClicking}" Value="True">
-                                <Setter Property="Foreground" Value="LimeGreen"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-
-            <!-- CPS input -->
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="CPS:" VerticalAlignment="Center" Margin="8,4"/>
-            <Border Grid.Row="1" Grid.Column="1"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Right"
-                    CornerRadius="4"
+            <!-- ───────────────────────────── left list ──────────────────────────── -->
+            <Border Grid.Column="0"
+                    Background="{StaticResource MetalDarkGradient}"
+                    CornerRadius="8"
+                    BorderBrush="#333"
                     BorderThickness="1"
-                    BorderBrush="#007fd4"
-                    Background="#3c3c3c"
-                    Margin="8,4">
-                <TextBox Text="{Binding AutoClicker.CpsInput, UpdateSourceTrigger=PropertyChanged}"
+                    Margin="0,0,10,0"
+                    Padding="10">
+
+                <ListBox ItemsSource="{Binding SnapshotFileList.Names}"
+                         SelectedIndex="{Binding SelectedSnapshotIndex}"
                          Background="Transparent"
-                         Foreground="#eeeeee"
                          BorderThickness="0"
-                         TextAlignment="Center"
-                         MinWidth="60"
-                         Padding="4,2"/>
+                         Padding="4">
+
+                    <ListBox.Resources>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Foreground"
+                                    Value="#F2F2F2"/>
+                            <Setter Property="Margin"
+                                    Value="0,2"/>
+
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Bd"
+                                                Background="Transparent"
+                                                CornerRadius="2"
+                                                Padding="8">
+                                            <ContentPresenter HorizontalAlignment="Left"
+                                                              VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver"
+                                                     Value="True">
+                                                <Setter TargetName="Bd"
+                                                        Property="Background"
+                                                        Value="#2C2C2C"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected"
+                                                     Value="True">
+                                                <Setter TargetName="Bd"
+                                                        Property="Background"
+                                                        Value="#444"/>
+                                                <Setter Property="Foreground"
+                                                        Value="White"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.Resources>
+
+                </ListBox>
             </Border>
 
-            <!-- Interval (read-only display) -->
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="Interval:" VerticalAlignment="Center" Margin="8,4"/>
-            <TextBlock Grid.Row="2" Grid.Column="1"
-                       Text="{Binding AutoClicker.IntervalMs, StringFormat='{}{0} ms'}"
-                       HorizontalAlignment="Right"
-                       VerticalAlignment="Center"
-                       Margin="8,4"/>
+            <!-- ───────────────────────────── right panel ────────────────────────── -->
+            <Border Grid.Column="1"
+                    Background="{StaticResource MetalDarkGradient}"
+                    CornerRadius="8"
+                    BorderBrush="#333"
+                    BorderThickness="1"
+                    Padding="16">
+
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+
+                    <!-- parameter rows container -->
+                    <StackPanel Width="280">
+
+                        <!-- thin separators for every row -->
+                        <StackPanel.Resources>
+                            <Style TargetType="Border"
+                                   x:Key="RowBorder">
+                                <Setter Property="BorderBrush"
+                                        Value="#2d2d2d"/>
+                                <Setter Property="BorderThickness"
+                                        Value="0,0,0,1"/>
+                                <Setter Property="Padding"
+                                        Value="0 6 0 6"/>
+                            </Style>
+                        </StackPanel.Resources>
+
+                        <!-- ─────────────── Tracking row ─────────────── -->
+                        <Border Style="{StaticResource RowBorder}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Tracking:"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Column="1"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextAlignment="Right">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text"
+                                                    Value="No"/>
+                                            <Setter Property="Foreground"
+                                                    Value="#888"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTracking}"
+                                                             Value="True">
+                                                    <Setter Property="Text"
+                                                            Value="Yes"/>
+                                                    <Setter Property="Foreground"
+                                                            Value="LimeGreen"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+
+                        <!-- ─────────────── Playing row ──────────────── -->
+                        <Border Style="{StaticResource RowBorder}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Playing:"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBlock Grid.Column="1"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextAlignment="Right">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text"
+                                                    Value="No"/>
+                                            <Setter Property="Foreground"
+                                                    Value="#888"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPlaying}"
+                                                             Value="True">
+                                                    <Setter Property="Text"
+                                                            Value="Yes"/>
+                                                    <Setter Property="Foreground"
+                                                            Value="#7AB0DF"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </Border>
+
+                        <!-- ─────────────── Loop row ────────────────── -->
+                        <Border Style="{StaticResource RowBorder}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Loop:"
+                                           VerticalAlignment="Center"/>
+
+                                <CheckBox Grid.Column="1"
+                                          HorizontalAlignment="Right"
+                                          IsChecked="{Binding IsLooping}"
+                                          Width="24"
+                                          Height="24">
+                                    <CheckBox.Template>
+                                        <ControlTemplate TargetType="CheckBox">
+                                            <Border Width="24"
+                                                    Height="24"
+                                                    CornerRadius="3"
+                                                    BorderThickness="2">
+                                                <Border.BorderBrush>
+                                                    <LinearGradientBrush StartPoint="0,0"
+                                                                         EndPoint="1,1">
+                                                        <GradientStop Color="#8d8d8d"
+                                                                      Offset="0"/>
+                                                        <GradientStop Color="#5a5a5a"
+                                                                      Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Border.BorderBrush>
+                                                <Border.Background>
+                                                    <LinearGradientBrush StartPoint="0,0"
+                                                                         EndPoint="0,1">
+                                                        <GradientStop Color="#3a3a3a"
+                                                                      Offset="0"/>
+                                                        <GradientStop Color="#2b2b2b"
+                                                                      Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Border.Background>
+                                                <Path x:Name="Tick"
+                                                      Data="M 4 11 L 10 15 L 16 4"
+                                                      Stroke="#00e5ff"
+                                                      StrokeThickness="3"
+                                                      StrokeStartLineCap="Round"
+                                                      StrokeEndLineCap="Round"
+                                                      Visibility="Hidden"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsChecked"
+                                                         Value="True">
+                                                    <Setter TargetName="Tick"
+                                                            Property="Visibility"
+                                                            Value="Visible"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </CheckBox.Template>
+                                </CheckBox>
+                            </Grid>
+                        </Border>
+
+                        <!-- ─────────────── Speed row ───────────────── -->
+                        <Border Style="{StaticResource RowBorder}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Speed:"
+                                           VerticalAlignment="Center"/>
+
+                                <StackPanel Grid.Column="1"
+                                            Margin="4,0"
+                                            Background="#1E1E1E">
+
+                                    <!-- speed labels -->
+                                    <UniformGrid Columns="6"
+                                                 Margin="0,0,0,4">
+                                        <TextBlock Text="0.1"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="#F5F5F5"/>
+                                        <TextBlock Text="0.5"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="#F5F5F5"/>
+                                        <TextBlock Text="1"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="#F5F5F5"/>
+                                        <TextBlock Text="2"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="#F5F5F5"/>
+                                        <TextBlock Text="5"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="#F5F5F5"/>
+                                        <TextBlock Text="20"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="#F5F5F5"/>
+                                    </UniformGrid>
+
+                                    <!-- minimal, dark slider -->
+                                    <Slider x:Name="PlaybackSpeedSlider"
+                                            Minimum="0"
+                                            Maximum="5"
+                                            IsSnapToTickEnabled="True"
+                                            TickPlacement="None"
+                                            Height="24"
+                                            Margin="8,0"
+                                            Value="{Binding PlaybackSpeedIndex, Mode=TwoWay}">
+
+                                        <!-- thumb & track styles inline -->
+                                        <Slider.Resources>
+
+                                            <Style TargetType="Thumb">
+                                                <Setter Property="Width"
+                                                        Value="20"/>
+                                                <Setter Property="Height"
+                                                        Value="20"/>
+                                                <Setter Property="Background"
+                                                        Value="#64B5F6"/>
+                                                <Setter Property="BorderBrush"
+                                                        Value="White"/>
+                                                <Setter Property="BorderThickness"
+                                                        Value="1"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Thumb">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                                    BorderThickness="{TemplateBinding BorderThickness}"/>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+
+                                            <!-- 4 px‑high track -->
+                                            <Style TargetType="RepeatButton">
+                                                <Setter Property="Height"
+                                                        Value="4"/>
+                                                <Setter Property="Background"
+                                                        Value="#444"/>
+                                                <Setter Property="BorderThickness"
+                                                        Value="0"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="RepeatButton">
+                                                            <Border Background="{TemplateBinding Background}"
+                                                                    CornerRadius="2"/>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+
+                                        </Slider.Resources>
+                                    </Slider>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- run button -->
+                    <Button Command="{Binding RunSnapshot}"
+                            Cursor="Hand"
+                            FontWeight="SemiBold"
+                            Foreground="#E0E0E0"
+                            Width="190"
+                            Padding="14,10"
+                            Margin="0 18 0 0"
+                            Content="▶ Run Snapshot">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Rim"
+                                        CornerRadius="6"
+                                        BorderThickness="2">
+                                    <Border.BorderBrush>
+                                        <LinearGradientBrush StartPoint="0,0"
+                                                             EndPoint="1,1">
+                                            <GradientStop Color="#979797"
+                                                          Offset="0"/>
+                                            <GradientStop Color="#5F5F5F"
+                                                          Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.BorderBrush>
+                                    <Border x:Name="Fill"
+                                            CornerRadius="2"
+                                            Padding="12,8">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0"
+                                                                 EndPoint="0,1">
+                                                <GradientStop Color="#454545"
+                                                              Offset="0"/>
+                                                <GradientStop Color="#373737"
+                                                              Offset="1"/>
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <ContentPresenter HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+                                    </Border>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver"
+                                             Value="True">
+                                        <Setter TargetName="Rim"
+                                                Property="BorderBrush">
+                                            <Setter.Value>
+                                                <LinearGradientBrush StartPoint="0,0"
+                                                                     EndPoint="1,1">
+                                                    <GradientStop Color="#B2B2B2"
+                                                                  Offset="0"/>
+                                                    <GradientStop Color="#7A7A7A"
+                                                                  Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter TargetName="Fill"
+                                                Property="Background">
+                                            <Setter.Value>
+                                                <LinearGradientBrush StartPoint="0,0"
+                                                                     EndPoint="0,1">
+                                                    <GradientStop Color="#3F3F3F"
+                                                                  Offset="0"/>
+                                                    <GradientStop Color="#2E2E2E"
+                                                                  Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                    <Trigger Property="IsPressed"
+                                             Value="True">
+                                        <Setter TargetName="Fill"
+                                                Property="Background">
+                                            <Setter.Value>
+                                                <LinearGradientBrush StartPoint="0,0"
+                                                                     EndPoint="0,1">
+                                                    <GradientStop Color="#242424"
+                                                                  Offset="0"/>
+                                                    <GradientStop Color="#1B1B1B"
+                                                                  Offset="1"/>
+                                                </LinearGradientBrush>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <!-- hotkey hints -->
+                    <TextBlock HorizontalAlignment="Center"
+                               Margin="0 16 0 0"
+                               FontSize="15"
+                               TextAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text"
+                                        Value="Press SPACE to start recording&#x0a;Ctrl+R to play snapshot"/>
+                                <Setter Property="Foreground"
+                                        Value="#888"/>
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsTracking}"
+                                                       Value="True"/>
+                                            <Condition Binding="{Binding IsPlaying}"
+                                                       Value="True"/>
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Text"
+                                                Value="Press ESC to stop (record &amp; playback)"/>
+                                        <Setter Property="Foreground"
+                                                Value="#FFA500"/>
+                                    </MultiDataTrigger>
+                                    <DataTrigger Binding="{Binding IsTracking}"
+                                                 Value="True">
+                                        <Setter Property="Text"
+                                                Value="Press ESC to stop recording snapshot"/>
+                                        <Setter Property="Foreground"
+                                                Value="LimeGreen"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsPlaying}"
+                                                 Value="True">
+                                        <Setter Property="Text"
+                                                Value="Press ESC to stop running snapshot"/>
+                                        <Setter Property="Foreground"
+                                                Value="#7AB0DF"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                </StackPanel>
+            </Border>
         </Grid>
-
-        <!-- Clicks done label -->
-        <TextBlock Text="Clicks done:"
-                   FontSize="12"
-                   Foreground="#888"
-                   TextAlignment="Center"
-                   Margin="0 20 0 2" />
-
-        <!-- Big Click Count -->
-        <TextBlock Text="{Binding AutoClicker.ClicksCount}"
-                   FontSize="48"
-                   FontWeight="Bold"
-                   Foreground="#007fd4"
-                   TextAlignment="Center"
-                   Margin="0 0 0 20" />
-
-        <!-- Smart Hotkey Prompt -->
-        <TextBlock TextAlignment="Center"
-                   FontSize="20"
-                   FontWeight="SemiBold">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="Text" Value="Press SPACE to start" />
-                    <Setter Property="Foreground" Value="#7AB0DF" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding AutoClicker.IsClicking}" Value="True">
-                            <Setter Property="Text" Value="Press ESC to stop" />
-                            <Setter Property="Foreground" Value="LimeGreen" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
-
-    </StackPanel>
+    </Grid>
 </local:MainWindow>
