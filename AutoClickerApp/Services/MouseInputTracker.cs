@@ -21,7 +21,7 @@ public class MouseInputTracker
   public string SnapshotsPath = Path.GetFullPath("./Snapshots");
 
   private readonly List<MouseInputSnapshot> _snapshots = new List<MouseInputSnapshot>();
-  private int _intervalMs = 25;
+  private int _intervalMs = 10;
 
   public bool IsTracking = false;
   public Action<bool> IsTrackingAction;
@@ -30,6 +30,8 @@ public class MouseInputTracker
   public Action<bool> IsPlayingAction;
 
   public bool IsLooping = false;
+
+  public bool isQuickSave = false;
 
   public double PlaybackSpeed = 1.0;
 
@@ -71,7 +73,8 @@ public class MouseInputTracker
   {
     if (!IsTracking) return false;
 
-    if(IsTracking) {
+    if (IsTracking)
+    {
       IsTracking = false;
       WriteOutputFile();
       _snapshots.Clear();
@@ -101,6 +104,14 @@ public class MouseInputTracker
   {
     string defaultFileName = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss") + ".csv";
 
+    // if quicksave
+    if (isQuickSave)
+    {
+      _writeSnapshotsToFile(Path.Combine(SnapshotsPath, defaultFileName));
+      return;
+    }
+
+    // if not quicksave
     SaveFileDialog saveDialog = new SaveFileDialog
     {
       FileName = defaultFileName,
@@ -113,16 +124,17 @@ public class MouseInputTracker
     bool? result = saveDialog.ShowDialog();
 
     if (result == true)
-    {
-      string path = saveDialog.FileName;
+      _writeSnapshotsToFile(saveDialog.FileName);
+  }
 
-      using (StreamWriter outputFile = new StreamWriter(path))
+  private void _writeSnapshotsToFile(string fileName)
+  {
+    using (StreamWriter outputFile = new StreamWriter(fileName))
+    {
+      foreach (MouseInputSnapshot sn in _snapshots)
       {
-        foreach (MouseInputSnapshot sn in _snapshots)
-        {
-          string csvLine = String.Concat(sn.X, ",", sn.Y, ",", sn.IsLeftButtonDown ? 1 : 0, ",", sn.IsRightButtonDown ? 1 : 0, ",", sn.Timestamp);
-          outputFile.WriteLine(csvLine);
-        }
+        string csvLine = String.Concat(sn.X, ",", sn.Y, ",", sn.IsLeftButtonDown ? 1 : 0, ",", sn.IsRightButtonDown ? 1 : 0, ",", sn.Timestamp);
+        outputFile.WriteLine(csvLine);
       }
     }
   }

@@ -81,11 +81,11 @@ public class MainWindowVM : ViewModelBase
             IsPlaying = status;
             OnPropertyChanged("IsPlaying");
         };
+
         WindowsMessageBinder.MouseInputTracker.IsTrackingAction += (status) =>
         {
             IsTracking = status;
             OnPropertyChanged("IsTracking");
-            // after tracking reload the file list
             SnapshotFileList = new SnapshotFileList(WindowsMessageBinder.MouseInputTracker.SnapshotsPath);
         };
     }

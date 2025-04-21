@@ -319,7 +319,7 @@ public class MouseInputTracker
   public string SnapshotsPath = Path.GetFullPath("./Snapshots");
 
   private readonly List<MouseInputSnapshot> _snapshots = new List<MouseInputSnapshot>();
-  private int _intervalMs = 25;
+  private int _intervalMs = 10;
 
   public bool IsTracking = false;
   public Action<bool> IsTrackingAction;
@@ -328,6 +328,8 @@ public class MouseInputTracker
   public Action<bool> IsPlayingAction;
 
   public bool IsLooping = false;
+
+  public bool isQuickSave = false;
 
   public double PlaybackSpeed = 1.0;
 
@@ -369,7 +371,8 @@ public class MouseInputTracker
   {
     if (!IsTracking) return false;
 
-    if(IsTracking) {
+    if (IsTracking)
+    {
       IsTracking = false;
       WriteOutputFile();
       _snapshots.Clear();
@@ -399,6 +402,14 @@ public class MouseInputTracker
   {
     string defaultFileName = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss") + ".csv";
 
+    // if quicksave
+    if (isQuickSave)
+    {
+      _writeSnapshotsToFile(Path.Combine(SnapshotsPath, defaultFileName));
+      return;
+    }
+
+    // if not quicksave
     SaveFileDialog saveDialog = new SaveFileDialog
     {
       FileName = defaultFileName,
@@ -411,16 +422,17 @@ public class MouseInputTracker
     bool? result = saveDialog.ShowDialog();
 
     if (result == true)
-    {
-      string path = saveDialog.FileName;
+      _writeSnapshotsToFile(saveDialog.FileName);
+  }
 
-      using (StreamWriter outputFile = new StreamWriter(path))
+  private void _writeSnapshotsToFile(string fileName)
+  {
+    using (StreamWriter outputFile = new StreamWriter(fileName))
+    {
+      foreach (MouseInputSnapshot sn in _snapshots)
       {
-        foreach (MouseInputSnapshot sn in _snapshots)
-        {
-          string csvLine = String.Concat(sn.X, ",", sn.Y, ",", sn.IsLeftButtonDown ? 1 : 0, ",", sn.IsRightButtonDown ? 1 : 0, ",", sn.Timestamp);
-          outputFile.WriteLine(csvLine);
-        }
+        string csvLine = String.Concat(sn.X, ",", sn.Y, ",", sn.IsLeftButtonDown ? 1 : 0, ",", sn.IsRightButtonDown ? 1 : 0, ",", sn.Timestamp);
+        outputFile.WriteLine(csvLine);
       }
     }
   }
@@ -786,11 +798,11 @@ public class MainWindowVM : ViewModelBase
             IsPlaying = status;
             OnPropertyChanged("IsPlaying");
         };
+
         WindowsMessageBinder.MouseInputTracker.IsTrackingAction += (status) =>
         {
             IsTracking = status;
             OnPropertyChanged("IsTracking");
-            // after tracking reload the file list
             SnapshotFileList = new SnapshotFileList(WindowsMessageBinder.MouseInputTracker.SnapshotsPath);
         };
     }
@@ -812,7 +824,6 @@ public class MainWindowVM : ViewModelBase
 
 public class MainWindowVMWithHotKeys : MainWindowVM
 {
-
     public void RegisterHotkeys()
     {
         if (WindowsMessageBinder == null) return;
@@ -820,20 +831,33 @@ public class MainWindowVMWithHotKeys : MainWindowVM
         // Escape
         WindowsMessageBinder.HotkeyHandler.RegisterHotkey(
             Key.Escape,
-            ExtendedModifierKeys.None,
-            _handleEscapeKey);
+            ExtendedModifierKeys.None | ExtendedModifierKeys.NoRepeat,
+            _ESCAPE_handler);
 
-        // Spacebar
+        // Alt + C = quick save snapshot (automatically save)
         WindowsMessageBinder.HotkeyHandler.RegisterHotkey(
-            Key.Space,
-            ExtendedModifierKeys.None,
-            _handleSpaceKey);
+            Key.C,
+            ExtendedModifierKeys.Alt | ExtendedModifierKeys.NoRepeat,
+            _ALT_C_handler);
 
-        // Ctrl + R
+        // Alt + shift + C = save snaphot (after recording ask user for the file name)
         WindowsMessageBinder.HotkeyHandler.RegisterHotkey(
-            Key.R,
-            ExtendedModifierKeys.Control | ExtendedModifierKeys.NoRepeat,
-            _handleCtrlRKey);
+            Key.C,
+            ExtendedModifierKeys.Alt | ExtendedModifierKeys.Shift | ExtendedModifierKeys.NoRepeat,
+            _ALT_SHIFT_C_handler);
+
+
+        // Alt + V run snapshot
+        WindowsMessageBinder.HotkeyHandler.RegisterHotkey(
+            Key.V,
+            ExtendedModifierKeys.Alt | ExtendedModifierKeys.NoRepeat,
+            _ALT_V_handler);
+
+        // Alt + L Togle looping
+        WindowsMessageBinder.HotkeyHandler.RegisterHotkey(
+            Key.L,
+            ExtendedModifierKeys.Alt | ExtendedModifierKeys.NoRepeat,
+            _ALT_L_handler);
     }
 
     //
@@ -841,15 +865,15 @@ public class MainWindowVMWithHotKeys : MainWindowVM
     //
 
     //
-    // ESCAPE key handler
+    // [ESCAPE] Stop recording | stop running snapshot
     //
-    private void _handleEscapeKey()
+    private void _ESCAPE_handler()
     {
         // stop tracking if tracking
         if (WindowsMessageBinder.MouseInputTracker.IsTracking)
         {
             bool success = WindowsMessageBinder.MouseInputTracker.StopTracking();
-            if(success) SelectedSnapshotIndex = 0; // select the last recoreded snapshot
+            if (success) SelectedSnapshotIndex = 0; // select the last recoreded snapshot
             OnPropertyChanged("IsTrackingStatusText");
         }
 
@@ -861,26 +885,44 @@ public class MainWindowVMWithHotKeys : MainWindowVM
         }
     }
 
-
     //
-    // SPACEBAR key handler
+    // [Alt + C] Recording with quick save
     //
-    private void _handleSpaceKey()
+    private void _ALT_C_handler()
     {
+        WindowsMessageBinder.MouseInputTracker.isQuickSave = true;
         // start tracking
         WindowsMessageBinder.MouseInputTracker.StartTracking();
         OnPropertyChanged("IsTrackingStatusText");
     }
 
     //
-    // R key handler
+    // [Alt + Shift + C] recording with manual save - dialog popup will ask user for file name
     //
-    private void _handleCtrlRKey()
+    private void _ALT_SHIFT_C_handler()
+    {
+        WindowsMessageBinder.MouseInputTracker.isQuickSave = false;
+        // start tracking
+        WindowsMessageBinder.MouseInputTracker.StartTracking();
+        OnPropertyChanged("IsTrackingStatusText");
+    }
+
+    //
+    // [Alt + V] Run snapshot 
+    //
+    private void _ALT_V_handler()
     {
         _runShapshot();
     }
-}
 
+    //
+    // [Alt + L] Toggle looping 
+    //
+    private void _ALT_L_handler()
+    {
+        IsLooping = !IsLooping;
+    }
+}
 
 public class ViewModelBase : INotifyPropertyChanged
 {

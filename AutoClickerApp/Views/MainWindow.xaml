@@ -35,10 +35,10 @@
             FontSize="22"
             FontWeight="Bold"
             Margin="0,12">
-                <Run Text="---- " Foreground="#eeeeee"/>
-                <Run Text="Record 'n" Foreground="#eeeeee"/>
-                <Run Text="Play" Foreground="#007fd4"/>
-                <Run Text=" ----" Foreground="#eeeeee"/>
+            <Run Text="Snapshot "
+                 Foreground="#eeeeee"/>
+            <Run Text="Playback"
+                 Foreground="#007fd4"/>
         </TextBlock>
 
         <Grid Grid.Row="1"
@@ -460,7 +460,7 @@
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Text"
-                                        Value="Press SPACE to start recording&#x0a;Ctrl+R to play snapshot"/>
+                                        Value="Press Alt + V to start recording&#x0a;Alt + V to play snapshot"/>
                                 <Setter Property="Foreground"
                                         Value="#888"/>
                                 <Style.Triggers>
