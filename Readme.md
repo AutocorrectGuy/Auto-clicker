@@ -20,7 +20,7 @@ of not only coding, but programming itself. This whole thing is more or leess pr
 
 ---
 
-![screenshot](Assets/screenshot_v2.png)
+![screenshot](Assets/screenshot_v3.png)
 
 > This was not meant to be design practice, so I fully asked chatgpt for the wpf xaml design and then just modified it by hand. Recently read a book about wpf design practices and it helped a lot there
 ---
