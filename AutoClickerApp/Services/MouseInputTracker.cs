@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 
 public class MouseInputSnapshot
@@ -18,71 +17,86 @@ public class MouseInputSnapshot
 
 public class MouseInputTracker
 {
+  // ---------- CONSTANTS ----------
+  private const int _intervalMs = 10;   // snapshot interval
+  private const int _minClickMs = 30;  // minimal press length (0.03 s)
+
+  // ---------- PUBLIC STATE ----------
   public string SnapshotsPath = Path.GetFullPath("./Snapshots");
-
-  private readonly List<MouseInputSnapshot> _snapshots = new List<MouseInputSnapshot>();
-  private int _intervalMs = 10;
-
   public bool IsTracking = false;
-  public Action<bool> IsTrackingAction;
-
   public bool IsPlaying = false;
+  public bool IsLooping = false;
+  public bool isQuickSave = false;
+  public double PlaybackSpeed = 1.0;  // 1 = realtime, >1 = faster
+
+  // UI callbacks
+  public Action<bool> IsTrackingAction;
   public Action<bool> IsPlayingAction;
 
-  public bool IsLooping = false;
+  // ---------- PRIVATE ----------
+  private readonly List<MouseInputSnapshot> _snapshots = new List<MouseInputSnapshot>();
+  private readonly object _stateLock = new object();
+  private Thread _trackingThread;
+  private Thread _playThread;
 
-  public bool isQuickSave = false;
-
-  public double PlaybackSpeed = 1.0;
-
+  // ---------- CONSTRUCTOR ----------
   public MouseInputTracker()
   {
     _initSnapshotsPath();
-    IsPlayingAction = (bool status) => { IsPlaying = status; };
-    IsTrackingAction = (bool status) => { IsTracking = status; };
+    IsTrackingAction = delegate (bool _) { };
+    IsPlayingAction = delegate (bool _) { };
   }
 
+  // ==========================================================
+  //  RECORDING
+  // ==========================================================
   public void StartTracking()
   {
-    if (IsTracking || IsPlaying) return;
-
-    IsTrackingAction.Invoke(true);
-
-    Task.Run(() =>
+    lock (_stateLock)
     {
-      Stopwatch stopwatch = Stopwatch.StartNew();
-      long nextTick = _intervalMs;
-
-      while (IsTracking)
-      {
-        long elapsedMs = stopwatch.ElapsedMilliseconds;
-
-        if (elapsedMs >= nextTick)
-        {
-          _snapshots.Add(CreateSnapshot((int)elapsedMs));
-          nextTick += _intervalMs;
-        }
-
-        Thread.Sleep(1);
-      }
-    });
-  }
-
-  // returns true if succeed saving a file
-  public bool StopTracking()
-  {
-    if (!IsTracking) return false;
-
-    if (IsTracking)
-    {
-      IsTracking = false;
-      WriteOutputFile();
-      _snapshots.Clear();
-      IsTrackingAction.Invoke(false); // trigger ui after file list refreshed
-      return true;
+      if (IsTracking || IsPlaying) return;
+      IsTracking = true;
     }
 
-    return false;
+    _trackingThread = new Thread(TrackingLoop) { IsBackground = true };
+    _trackingThread.Start();
+    IsTrackingAction(true);
+  }
+
+  private void TrackingLoop()
+  {
+    Stopwatch sw = Stopwatch.StartNew();
+    long nextTick = _intervalMs;
+
+    while (true)
+    {
+      lock (_stateLock) { if (!IsTracking) break; }
+
+      long elapsed = sw.ElapsedMilliseconds;
+      if (elapsed >= nextTick)
+      {
+        _snapshots.Add(CreateSnapshot((int)elapsed));
+        nextTick += _intervalMs;
+      }
+      Thread.Sleep(1);
+    }
+  }
+
+  public bool StopTracking()
+  {
+    lock (_stateLock)
+    {
+      if (!IsTracking) return false;
+      IsTracking = false;
+    }
+
+    if (_trackingThread != null && _trackingThread.IsAlive)
+      _trackingThread.Join();
+
+    WriteOutputFile();
+    _snapshots.Clear();
+    IsTrackingAction(false);
+    return true;
   }
 
   private MouseInputSnapshot CreateSnapshot(int relativeTimestamp)
@@ -100,135 +114,235 @@ public class MouseInputTracker
     };
   }
 
+  // ==========================================================
+  //  FILE I/O
+  // ==========================================================
   public void WriteOutputFile()
   {
-    string defaultFileName = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss") + ".csv";
+    string defaultName = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm-ss") + ".csv";
+    string path;
 
-    // if quicksave
     if (isQuickSave)
     {
-      _writeSnapshotsToFile(Path.Combine(SnapshotsPath, defaultFileName));
-      return;
+      path = Path.Combine(SnapshotsPath, defaultName);
     }
-
-    // if not quicksave
-    SaveFileDialog saveDialog = new SaveFileDialog
+    else
     {
-      FileName = defaultFileName,
-      Filter = "CSV Files (*.csv)|*.csv",
-      DefaultExt = ".csv",
-      Title = "Save Snapshot As",
-      InitialDirectory = SnapshotsPath
-    };
-
-    bool? result = saveDialog.ShowDialog();
-
-    if (result == true)
-      _writeSnapshotsToFile(saveDialog.FileName);
-  }
-
-  private void _writeSnapshotsToFile(string fileName)
-  {
-    using (StreamWriter outputFile = new StreamWriter(fileName))
-    {
-      foreach (MouseInputSnapshot sn in _snapshots)
+      SaveFileDialog dlg = new SaveFileDialog
       {
-        string csvLine = String.Concat(sn.X, ",", sn.Y, ",", sn.IsLeftButtonDown ? 1 : 0, ",", sn.IsRightButtonDown ? 1 : 0, ",", sn.Timestamp);
-        outputFile.WriteLine(csvLine);
-      }
+        FileName = defaultName,
+        Filter = "CSV Files (*.csv)|*.csv",
+        DefaultExt = ".csv",
+        Title = "Save Snapshot As",
+        InitialDirectory = SnapshotsPath
+      };
+      if (dlg.ShowDialog() != true) return;
+      path = dlg.FileName;
+    }
+
+    using (StreamWriter w = new StreamWriter(path))
+    {
+      foreach (MouseInputSnapshot s in _snapshots)
+        w.WriteLine(String.Concat(
+            s.X, ",",
+            s.Y, ",",
+            s.IsLeftButtonDown ? 1 : 0, ",",
+            s.IsRightButtonDown ? 1 : 0, ",",
+            s.Timestamp));
     }
   }
 
+  // ==========================================================
+  //  PLAYBACK
+  // ==========================================================
   public void PlaySnapshotFromFile(string filePath)
   {
-    if (IsPlaying || IsTracking) return;
+    /* ----------- UPDATED BLOCK ----------- */
+    lock (_stateLock)
+    {
+      if (IsTracking) return; // don’t start during recording
 
-    IsPlayingAction.Invoke(true);
+      if (_playThread != null && _playThread.IsAlive)
+        _playThread.Join(); // wait for any previous playback
+
+      if (IsPlaying) return; // still playing – bail
+
+      IsPlaying = true; // mark new playback
+    }
+    /* ----------- END UPDATED BLOCK -------- */
 
     if (!File.Exists(filePath))
     {
+      IsPlaying = false;
       MessageBox.Show("File does not exist: " + filePath);
       return;
     }
 
-    List<MouseInputSnapshot> loadedSnapshots = new List<MouseInputSnapshot>();
+    List<MouseInputSnapshot> snaps = _loadSnapshots(filePath);
+    IsPlayingAction(true);
 
-    foreach (var line in File.ReadAllLines(filePath))
+    _playThread = new Thread(delegate ()
     {
-      var parts = line.Split(',');
-      if (parts.Length != 5) continue;
-
-      loadedSnapshots.Add(new MouseInputSnapshot
+      try
       {
-        X = int.Parse(parts[0]),
-        Y = int.Parse(parts[1]),
-        IsLeftButtonDown = parts[2] == "1",
-        IsRightButtonDown = parts[3] == "1",
-        Timestamp = int.Parse(parts[4]) * PlaybackSpeed
+        do { _playOnce(snaps); } while (IsLooping);
+      }
+      finally
+      {
+        lock (_stateLock) { IsPlaying = false; }
+        IsPlayingAction(false);
+      }
+    })
+    { IsBackground = true };
+    _playThread.Start();
+  }
+
+  private List<MouseInputSnapshot> _loadSnapshots(string filePath)
+  {
+    List<MouseInputSnapshot> list = new List<MouseInputSnapshot>();
+
+    foreach (string line in File.ReadAllLines(filePath))
+    {
+      string[] p = line.Split(',');
+      if (p.Length != 5) continue;
+
+      double ts = Convert.ToInt32(p[4]) * PlaybackSpeed;   // 0.1 → 10× slower,  2 → 2× faster
+
+      list.Add(new MouseInputSnapshot
+      {
+        X = Convert.ToInt32(p[0]),
+        Y = Convert.ToInt32(p[1]),
+        IsLeftButtonDown = p[2] == "1",
+        IsRightButtonDown = p[3] == "1",
+        Timestamp = ts
       });
     }
 
-    Task.Run(() =>
-    {
-      if (IsLooping)
-        while (IsLooping) _playShapshotOnce(loadedSnapshots);
-      else
-        _playShapshotOnce(loadedSnapshots);
+    list = _pruneSnapshotsForSpeed(list);
+    _ensureMinHold(list, delegate (MouseInputSnapshot s) { return s.IsLeftButtonDown; });
+    _ensureMinHold(list, delegate (MouseInputSnapshot s) { return s.IsRightButtonDown; });
 
-      IsPlayingAction.Invoke(false);
-    });
+    return list;
   }
 
-  private void _playShapshotOnce(List<MouseInputSnapshot> loadedSnapshots)
+  private List<MouseInputSnapshot> _pruneSnapshotsForSpeed(List<MouseInputSnapshot> sn)
   {
+    if (PlaybackSpeed >= 1.0) return sn;
 
-    Stopwatch stopwatch = Stopwatch.StartNew();
+    int factor = (int)Math.Max(2, Math.Round(1.0 / PlaybackSpeed));
+    List<MouseInputSnapshot> pruned = new List<MouseInputSnapshot>(sn.Count / factor + 8);
 
-    int current = 0;
-    bool prevLeftDown = false; // left mouse down
-    bool prevRightDown = false; // right mouse down
+    bool prevL = false, prevR = false;
+    int index = 0;
 
-    while (IsPlaying && current < loadedSnapshots.Count)
+    foreach (MouseInputSnapshot s in sn)
     {
-      int elapsed = (int)stopwatch.ElapsedMilliseconds;
-      MouseInputSnapshot snap = loadedSnapshots[current];
+      bool stateChange = (s.IsLeftButtonDown != prevL) || (s.IsRightButtonDown != prevR);
 
-      if (elapsed >= snap.Timestamp)
+      if (stateChange || (index % factor == 0))
+        pruned.Add(s);
+
+      prevL = s.IsLeftButtonDown;
+      prevR = s.IsRightButtonDown;
+      index++;
+    }
+    return pruned;
+  }
+
+  private void _ensureMinHold(List<MouseInputSnapshot> sn, Predicate<MouseInputSnapshot> isDown)
+  {
+    int lastDown = -1;
+
+    for (int i = 0; i < sn.Count; i++)
+    {
+      if (isDown(sn[i]) && (i == 0 || !isDown(sn[i - 1])))
+        lastDown = i;
+      else if (!isDown(sn[i]) && i > 0 && isDown(sn[i - 1]))
       {
-        User32.SetCursorPos(snap.X, snap.Y);
+        double hold = sn[i].Timestamp - sn[lastDown].Timestamp;
+        if (hold < _minClickMs)
+        {
+          double delta = _minClickMs - hold;
+          for (int j = i; j < sn.Count; j++)
+            sn[j].Timestamp += delta;
+        }
+      }
+    }
+  }
 
-        // Detect left click transition
-        if (snap.IsLeftButtonDown && !prevLeftDown)
-          User32.SendMouseDown(true); // left down
-        else if (!snap.IsLeftButtonDown && prevLeftDown)
-          User32.SendMouseUp(true); // left up
+  private void _playOnce(List<MouseInputSnapshot> sn)
+  {
+    Stopwatch sw = Stopwatch.StartNew();
+    int cur = 0;
+    bool prevL = false, prevR = false;
+    long lastLDown = -1, lastRDown = -1;
 
-        // Detect right click transition
-        if (snap.IsRightButtonDown && !prevRightDown)
-          User32.SendMouseDown(false); // right down
-        else if (!snap.IsRightButtonDown && prevRightDown)
-          User32.SendMouseUp(false); // right up
-
-        // Update previous states
-        prevLeftDown = snap.IsLeftButtonDown;
-        prevRightDown = snap.IsRightButtonDown;
-
-        current++;
+    while (true)
+    {
+      /* ----- HARD‑STOP ON ESCAPE (UPDATED) ----- */
+      if ((User32.GetAsyncKeyState(0x1B) & 0x8000) != 0)   // VK_ESCAPE
+      {
+        lock (_stateLock)
+        {
+          IsPlaying = false;  // stop current loop
+          IsLooping = false;  // prevent outer loop restart
+        }
       }
 
+      bool playing;
+      lock (_stateLock) { playing = IsPlaying; }
+      if (!playing || cur >= sn.Count) break;
+
+      int elapsed = (int)sw.ElapsedMilliseconds;
+      MouseInputSnapshot s = sn[cur];
+
+      if (elapsed >= s.Timestamp)
+      {
+        User32.SetCursorPos(s.X, s.Y);
+
+        // ------- LEFT -------
+        if (s.IsLeftButtonDown && !prevL)
+        {
+          User32.SendMouseDown(true);
+          lastLDown = elapsed;
+        }
+        else if (!s.IsLeftButtonDown && prevL)
+        {
+          int hold = elapsed - (int)lastLDown;
+          if (hold < _minClickMs) Thread.Sleep(_minClickMs - hold);
+          User32.SendMouseUp(true);
+        }
+
+        // ------- RIGHT -------
+        if (s.IsRightButtonDown && !prevR)
+        {
+          User32.SendMouseDown(false);
+          lastRDown = elapsed;
+        }
+        else if (!s.IsRightButtonDown && prevR)
+        {
+          int hold = elapsed - (int)lastRDown;
+          if (hold < _minClickMs) Thread.Sleep(_minClickMs - hold);
+          User32.SendMouseUp(false);
+        }
+
+        prevL = s.IsLeftButtonDown;
+        prevR = s.IsRightButtonDown;
+        cur++;
+      }
       Thread.Sleep(1);
     }
 
-    // release if still down at end
-    if (prevLeftDown) User32.SendMouseUp(true);
-    if (prevRightDown) User32.SendMouseUp(true);
+    if (prevL) User32.SendMouseUp(true);
+    if (prevR) User32.SendMouseUp(false);
   }
 
+  // ==========================================================
+  //  MISC
+  // ==========================================================
   private void _initSnapshotsPath()
   {
-    if (Directory.Exists(SnapshotsPath))
-      return;
-
-    Directory.CreateDirectory(SnapshotsPath);
+    if (!Directory.Exists(SnapshotsPath))
+      Directory.CreateDirectory(SnapshotsPath);
   }
 }
