@@ -47,8 +47,8 @@ All hotkeys live in **./SnapshotPlayer/Config/GlobalHotkeyConfig.cs**.
 
 | Action                         | Default Key(s) | Change to any System.Windows.Input.Key |
 |--------------------------------|----------------|----------------------------------------|
-| Start / stop **recording**     | **Space**      | Replace Key.Space with any key |
-| Start **playback**             | **Ctrl + R**   | Replace Key.R (and the modifier) |
+| Start / stop **recording**     | **Alt + C**      | Replace Key.Space with any key |
+| Start **playback**             | **Alt + V**   | Replace Key.R (and the modifier) |
 | Stop **recording / playback**  | **Escape**     | Replace Key.Escape with any key |
 
 ---
